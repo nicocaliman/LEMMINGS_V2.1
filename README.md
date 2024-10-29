@@ -1,56 +1,52 @@
-# LEMMINGS_V2.1
-<!-- TOC --><a name="patrón-command"></a>
-### Patrón *Command*
+#LEMMINGS_V2.1
+The command pattern
+In the application built in the previous assignment, the user could enter several different commands in order to update the game, reset the game, ask for help, etc. The objective of the first part of the refactoring is to introduce a structure to the part of the code that is concerned with processing the user commands which will facilitate the addition of new commands, i.e. which will enable new commands to be added with minimal modifications to the existing code. This structure is the well-known software design pattern 2 referred to as the command pattern 3. The general idea is to encapsulate each user action in its own class where, in this case, the user actions are the commands.
 
-En la práctica anterior el usuario podía realizar varias acciones: pedir ayuda, resetear el juego, actualizarlo, etc. El objetivo técnico es poder añadir nuevas acciones sin tener que modificar código ajeno a la nueva acción. Para ello, vamos a introducir el patrón de diseño *Command*[^2], que es especialmente adecuado para este tipo de situaciones. La idea general es encapsular cada acción del usuario en su propia clase. Cada acción se corresponderá con un comando, de tal manera que el comportamiento de un comando quedará completamente aislado del resto. 
+The following classes are involved in our application of the command pattern:
 
-[^2]: Lo que vamos a ver en esta sección no es el patrón *Command* de manera rigurosa, sino una adaptación de éste a las necesidades de la práctica.
+Commmand: an abstract class that encapsulates the functionality that is common to all the concrete commands. It has four attributes of type String, initialised in the constructor: name, shortcut, details, help, and getter methods for each of these attributes.
 
-En el patrón *Command* van a intervenir las siguientes entidades, las cuales iremos explicando en varios pasos, a medida que vayamos profundizando en los detalles:
+NoParamsCommand: an abstract class that inherits from Commmand and which is the base class of any command class representing a command with no parameters, the case for all of the commands we have defined so far.
 
-- La clase `Command` es una clase abstracta que encapsula la funcionalidad común de todos los comandos concretos. Tiene atributos para almacenar el nombre (`name`), el atajo (`shortcut`), sus detalles (`details`) y su ayuda (`help`). Esos atributos son inicializados en su constructora y se cuenta con métodos *getters* para ellos.
-- La clase `NoParamsCommand` es una clase abstracta que hereda de `Command` y que sirve de base para todos los comandos que no tienen parámetros (de momento todos). Más adelante añadiremos comandos que sí tienen parámetros y que por lo tanto no heredarán de `NoParamsCommand`.
-- Los comandos concretos se corresponden con las acciones del usuario: `HelpCommand`, `ExitCommand`... 
-- Cada acción va a tener su propia clase y cada comando tendrá tres métodos básicos:
-    - `protected boolean matchCommand(String)` comprueba si una acción introducida por teclado se corresponde con la del comando.
-    - `public Command parse(String[])` recibe como parámetro un array de *strings*, que en esta práctica secorresponden con la entrada proporcionada por el usuario. En caso de que el array de *strings* encaje con el commando actual devuelve una instancia del comando; si no devolverá `null`.
-    - `public void execute(Game, GameView)` ejecuta la acción del comando, modificando el juego y pidiendo a la vista que se actualice en los casos necesarios.   
+Concrete command classes: HelpCommand, ExitCommand, etc., one class for each program command. In the case of a command with parameters, the corresponding class will have attributes to store the value of these parameters. Each concrete command class has (at least) the following three methods:
 
+protected boolean matchCommand(String): checks if the first word of the text introduced by the user via the keyboard (minimally processed) corresponds to the command name. It is called by the parse method.
 
+public Command parse(String[]): checks if the text introduced by the user via the keyboard (minimally processed) corresponds to a use of the command (which involves checking the validity of the parameter values):
 
-- La clase `Controller`, correspondiente al controlador, va a quedar muy reducida pues, como veremos más adelante, su funcionalidad quedará delegada en los comandos concretos.
+If so, it returns an instance of the owning class, which then represents this use of the command. In the case of a command with no parameters, the parse method can simply return the value this. but in the case of a command with parameters, to avoid creating fragile code 4, it must return a new instance of the command class, rather than changing the values of the attributes of the containing object and then returning this.
 
-En la práctica anterior, para saber qué comando se ejecutaba, el **bucle de Juego**, implementado mediante el método `run()` del controlador, contenía un `switch` (o una serie de `if` anidados) cuyas opciones se correspondían con los diferentes comandos.
+If not, it returns the value null.
 
-En la nueva versión, el método `run()` del controlador va a tener, más o menos, el siguiente aspecto. Tu código no tiene que ser exactamente igual, pero lo importante es que veas que se asemeja a esta propuesta.
+public void execute(Game, GameView): executes the functionality associated to the command by calling a method of the Game class, updating the view where necessary (in some commands, this method may also perform some other actions). In later versions of the program, command execution may fail, in which case updating the view will consist of printing an error message instead of printing the current state of the game.
 
-```java
+Controller: the code of the controller class is now reduced to only a few lines since most of the functionality that it included in Assignment 1 is now delegated to the concrete command classes.
+
+Main loop of the program. In the previous assignment, in order to know which command to execute, the main loop of the program in the run method of the controller contained a switch or if-else ladder with one option for each of the commands. In the reduced version of the controller, the run method has the following aspect (your code does not have be be exactly the same but should be similar):
+
 while (!game.isFinished()) {
 
     String[] userWords = view.prompt();
     Command command = CommandGenerator.parse(userWords);
 
     if (command != null) 
-		command.execute(game, view);
+        command.execute(game, view);
     else 
-        view.showError(Messages.UNKNOWN_COMMAND.formatted(words[0]));
+        view.showError(Messages.UNKNOWN_COMMAND);
 }   
-```
+Basically, while the game is not finished (due to internal game reasons or to a user exit), the program reads the text entered by the user, parses it to obtain an object of class Command and then calls the execute method of this object to effect the functionality of the command entered by the user and to update the view after doing so, if necessary. In the case where the input text does not correspond to any of the existing commands, the error message Messages.UNKNOWN_COMMAND is printed.
 
-Mientras que la partida no finalice, en el bucle leemos una acción de la consola, la analizamos sintácticamente para obtener el comando asociado y lo ejecutamos. La ejecución del comando decidirá en particular si tiene que volver a mostrar o no el estado del juego. Además, si no se ha podido parsear la entrada dada por el usuario mostramos el mensaje de error de  `Messages.UNKNOWN_COMMAND`.
+Genericity of the Controller class. The most important part of the code for the main loop shown above is the following line:
 
-En el bucle anterior, el momento clave se corresponde con la línea de código:
-
-```java
 Command command = CommandGenerator.parse(userWords);
-```
+The key point is that the controller is generic: it only handles abstract commands and does not know which concrete command is being executed; the knowledge of what functionality corresponds to each command is contained in each concrete command class. It is this mechanism that facilitates the addition of new concrete commands with minimal changes to the existing code.
 
-El controlador solo maneja comandos abstractos, por lo que no sabe qué comando concreto se ejecutará, ni qué hará exactamente el comando. Este es el mecanismo clave que nos facilitará la tarea de añadir nuevos comandos concretos.
+The CommandGenerator class. The parse method of this class is a static method which returns an instance of the concrete command class that corresponds to the text entered by the user. To this end, the CommandGenerator class has a static attribute containing a list of instances of the class Command, concretely, it contains exactly one instance of each of the existing command classes. The parse method of the CommandGenerator method traverses this list calling the parse method of each of its command class instances. If any of these parse methods returns a non-null value (which will be an instance of one of the command classes), the parse of the CommandGenerator returns this non-null value, otherwise it returns the value null.
 
-El método `parse(String[])` de la clase `CommandGenerator` es un método estático, encargado de encontrar el comando concreto asociado a la entrada del usuario. Para ello, la clase `CommandGenerator` mantiene una lista `AVAILABLE_COMMANDS` con los comandos disponibles. Este método recorre la lista de comandos para determinar, llamando al método `parse(String[])` de cada comando, con cuál se corresponde la entrada del usuario. Cuando lo encuentra, como se ha comentado anteriormente, el `parse` del commando concreto procesa los posibles parámetros, crea una instancia de ese mismo tipo de comando y lo devuelve al controlador.
+The CommandGenerator contains another static method commandHelp that generates the output of the help command (so must be called by the execute method of the HelpCommand class). Like the parse command, it accomplishes its task by traversing the AVAILABLE_COMMANDS list but in this case invoking the helpText() method of each object in the list.
 
-El esqueleto del código de `CommandGenerator` es:
-```java
+The following is a skeleton of this code:
+
 public class CommandGenerator {
 
     private static final List<Command> AVAILABLE_COMMANDS = Arrays.asList(
@@ -60,29 +56,18 @@ public class CommandGenerator {
         new ExitCommand(),
         // ...
     );
+
+    public static Command parse(String[] commandWords){
+	//...
+    }
+
+    public static String commandHelp(){
+	//...
+    }
+
 }
-```
+The concrete command classes As already stated, each command has four attributes of type String: its name, its abbreviated name (or shortcut), the initial part of its help message, and the details of its help message. For example, the concrete command HelpCommand has the following constants and its constructor passes their values to the constructor of its superclass as follows:
 
-El atributo `AVAILABLE_COMMANDS` se usa en los siguientes métodos de `CommandGenerator`:
-
-- El método
-	```java 
-	public static Command parse(String[] commandWords)
-	```
-	invoca el método `parse` de cada subclase de `Command`, tal y como se ha explicado anteriormente.
-
-- El método
-	```java
-	public static String commandHelp()
-	```
-	tiene una estructura similar al método anterior, pero invoca el método `helpText()` de cada subclase de `Command`. A su vez, es invocado por el método `execute` de la clase `HelpCommand`.
-
-Después de recibir un `Command`, el controlador simplemente lo ejecutará usando `game`  y `gameView` como parámetros, pues son parte del controlador y se comunican con ambos.
-
-Como decíamos, todos los comandos tienen una serie de información asociada, como el nombre, atajo, detalle, etc. Por ejemplo, el comando concreto `HelpCommand` define las siguientes constantes
-e invoca en su constructor al constructor `super` de la siguiente forma:
-
-```java
 public class HelpCommand extends NoParamsCommand {
 
 	private static final String NAME = Messages.COMMAND_HELP_NAME;
@@ -94,50 +79,28 @@ public class HelpCommand extends NoParamsCommand {
 		super(NAME, SHORTCUT, DETAILS, HELP);
 	}
 
-    // Implementación de execute
+    // Implementation of execute
 }
-```
+The NoParamsCommand class which inherits from Command is the superclass of all concrete command classes that represent commands with no parameters such as HelpCommand. The raison d'être of this class is that the parsing of all commands with no parameters only differs in the value of the name and shortcut attributes used to compare with the input text, so that the parse method of all these classes can be inherited from the NoParamsCommand class. Evidently, the same is not true of the execute method which will be different for every command, for which reason, the NoParamsCommand class must be abstract.
 
-<!-- Los métodos abstractos no pueden ser estáticos. Esos métodos estarán declarados en Command  -->
+Inheritance and polymorphism
+We have seen that the use of inheritance in the Command inheritance hierarchy significantly reduces the repetition of code. Moreover, the use of inheritance and polymorphism in the command pattern greatly facilitates the introduction of new commands, the key aspect being that the Controller class is generic, i.e. it does not handle specific commands but only handles objects of the abstract class Command.
 
-Como hemos indicado anteriormente, todos los comandos heredan de la clase `Command`. La clase `Command` es abstracta, por lo que son los comandos concretos los que implementan su funcionalidad:
+Similarly, use of inheritance in an inheritance hierarchy of game objects would also reduce the repetition of code and facilitate the introduction of new game objects. The key aspect to obtaining the latter benefit is that the Game class be generic, i.e. it should not handle specific game objects only objects of an abstract class called GameObject, from which all the concrete game object classes (currently Lemming, Wall and ExitDoor), derive. So the game code must not seek to identify the dynamic type (i.e. which concrete subclass of GameObject) of the objects it is handling. This abstract class should contain all the attributes and methods that are common to all the concrete game object classes; where appropriate, each concrete game object class can overwrite inherited methods to implement its own behaviour. Note that
 
-- El método `execute` realiza la acción sobre *game* y utiliza *gameView* para volver a dibujar el estado del juego (si procede). Más adelante puede ocurrir que la ejecución de un comando no tenga éxito, en cuyo caso se puede usar *gameView* para mostrar un mensaje de error.
+whether to define an abstract method in GameObject, or a method containing default behaviour, is a design decision,
 
-- El método `parse(String[])` cuando tiene éxito, los argumentos corresponden con el commando, devuelve una instancia del comando concreto; si no devuelve `null`. Como cada comando procesa sus propios parámetros, este método devolverá `this` o creará una nueva instancia de la misma clase en caso de que el comando tenga atributos de estado que hagan que su comportamiento sea distinto para cada instancia de la clase.
+in accord with the DRY principle, attributes and non-abstract methods should always be placed in the highest class possible of the inheritance hierarchy.
 
-La clase abstracta `NoParamsCommand`, que hereda de `Command`, sirve para representar a todos los comandos que no necesitan parámetros, como ***help*** o ***reset***, y de la que heredarán, por lo tanto, comandos como `HelpCommand` o `ResetCommand`. Esta clase puede implementar el método `parse` porque todos esos comandos se *parsean* igual: basta comprobar que el usuario solamente ha introducido una palabra que coincide con el nombre o la abreviatura del comando, en cuyo caso se puede devolver `this`. Obviamente, la implementación de `execute` se tiene que posponer a los comandos concretos, de modo que la clase `NoParamsCommand` tiene que ser abstracta. 
+All game objects have, at least, an attribute to store the game, an attribute to store their position and a boolean attribute to indicate whether they are alive or not. They have, at least, methods to manipulate their position and a method to communicate whether they are alive or not. They will also have the method:
 
-Fíjate también que para los comandos con parámetros no sería correcto que su método `parse` devuelva `this`, sino que es necesario devolver un nuevo comando del tipo correspondiente.[^3]
+public void update()
 
-[^3]: No sería correcto porque el código sería *frágil*. Devolver `this` significa devolver siempre el objeto que está almacenado en el array `AVAILABLE_COMMANDS`, cambiando previamente el valor de los atributos si se trata de un comando con parámetros. Es decir, supone que solo puede existir un objeto de esta subclase de `Command` en el juego a la vez. Si se trata de un comando con parámetros (representado por un objeto con estado) esta suposición totalmente innecesaria podría invalidarse con una pequeña modificación de la aplicación, por ejemplo, al añadir una pila de comandos ya ejecutados para implementar un comando `undo`.
+which, in the case of the Wall class, has an empty body.
 
-<!-- TOC --><a name="herencia-y-polimorfismo"></a>
-### Herencia y polimorfismo
+The game object container
+Having refactored the code for the commands and for the game objects, we now turn our attention to the management of the game objects. As in the previous assignment, the game objects will be managed by the GameObjectContainer class. However, instead of using multiple lists, we can take advantage of the inheritance hierarchy of game objects to store them all on a single list of objects of type GameObject. For simplicity, we use an ArrayList 5 of elements of type GameObject:
 
-Una de las partes más frustrantes y propensa a errores de la primera práctica ha sido tener que replicar código en los objetos del juego y en las listas de objetos. Esta incomodidad la vamos a resolver utilizando el mecanismo por antonomasia de la programación orientada a objetos: la **herencia**. 
-
-Con el patrón `Command` hemos buscado poder introducir nuevos comandos sin tener que cambiar el código del controlador. Análogamente, queremos poder añadir nuevos objetos de juego sin tener que modificar el resto del código. La clave para ello es que `Game` no maneje objetos específicos, sino que maneje objetos de una entidad abstracta que vamos a llamar `GameObject`. El resto de objetos del juego heredarán de esta entidad. Como todos los elementos del juego van a ser `GameObject`, compartirán la mayoría de los atributos y métodos, y cada uno de los objetos de juego concretos será el encargado de implementar su propio comportamiento. 
-
-Todos los `GameObject` tienen al menos un atributo para almacenar su posición en el juego y otro booleano que indica si el objeto está vivo o no, y métodos auxiliares para manipular esa posición o para saber si el objeto está vivo o no. Por último, necesitaremos el siguiente método:
-
-```public void update()```
-
-para que cada objeto se actualice en función de su estado y de su contexto.
-Es normal que en objetos sencillos la implementación de este método sea vacía, como ocurre con la clase `Wall`.
-
-`GameObject` será la clase base en la jerarquía de clases de los objetos del juego:
-
-- La clase abstracta `GameObject` tendrá los atributos y métodos básicos para controlar la posición en el tablero y una referencia a la clase `Game`.
-- De `GameObject` heredarán las clases `Lemming`, `Wall` y `ExitDoor`.
-
-<!-- TOC --><a name="contenedor-de-objetos-del-juego"></a>
-### Contenedor de objetos del juego
-
-Ahora que hemos conseguido que todos los objetos presentes en el tablero pertenezcan a (alguna subclase de) la clase `GameObject`, podemos ocuparnos de refactorizar el código de las listas. Al igual que en la práctica anterior, usaremos la clase `GameObjectContainer`. Sin embargo, en vez de usar varias listas, una para cada tipo de objeto, bastará que `GameObjectContainer` gestione una única lista con elementos de tipo `GameObject`. 
-Por simplicidad, vamos a usar un `ArrayList` con elementos de tipo `GameObject`:
-
-```java
 public class GameObjectContainer {
 
 	private List<GameObject> gameObjects;
@@ -147,32 +110,27 @@ public class GameObjectContainer {
 	}
     //...
 }
-```
+Observe that, like the Game class, the GameObjectContainer class only deals with objects of the abstract class GameObject so, like the game code, the container code must not seek to identify the dynamic type (i.e. which concrete subclass of GameObject) of the objects it is handling. Finally, it is of great importance that the implementation details of the GameObjectContainer be private so, for example, it should not export the value of any of the attributes of the ArrayList class that it is using to store the game objects. This information hiding enables the implementation of the container to be changed without affecting the rest of the program code.
 
-En el contenedor manejaremos abstracciones de los objetos, por lo que no podemos (¡ni debemos!) distinguir quién es quién.
+Interfaces implemented by the Game class
+The Game class offers services to different parts of the program, namely:
 
+Controller: invokes those methods of the game, such as update or reset, that implement the commands entered by the user; after the above-described refactoring, the calls to these methods are made from the body of the execute methods of the Command classes. It also invokes methods that return information about the state of the game, such as isFinished.
 
-Por último, es muy importante que los detalles de la implementación del `GameObjectContainer` sean privados. Eso permite cambiar la implementación (el tipo de colección) sin tener que modificar código en el resto de la práctica. 
+View: invokes methods that return information about the state of the game, such as getCycle, numLemmingsInBoard or positionToString, that is needed to display the current state.
 
-<!-- TOC --><a name="interfaces-de-game"></a>
-### Interfaces de `Game`
+Model: the game objects (part of the model, as is the Game class itself) invoke those methods of the game, such as isInAir or lemmingArrived, that concern interactions between game objects. Since these calls to the game result from calls by the game via the container, usually as part of an update, they are referred to as callbacks.
 
-En la Práctica 1, la clase `Game` se utilizaba desde tres contextos diferentes, correspondientes a los tres tipos de referencias de `Game` que se mantenían en otros puntos del código:
+Notice that with the current implementation, nothing prevents the model invoking a method of Game that was designed for the controller to invoke, e.g. a game object invoking the reset method, or the view invoking a method of Game designed for the model to invoke, e.g. the game view invoking the lemmingArrived method, etc. In order for the compiler to detect such inconsistent invocations we can use interfaces to define partial views on the services offered by the Game class. To that end, we define the following three interfaces:
 
-- En `Controller` se mantiene una referencia a `Game` para poder enviar al juego las instrucciones del usuario (ahora a través del método `execute(Game,GameView)` de los comandos). En este contexto, se usan métodos como `update()`, `isFinished()` o `reset()`.  
+GameModel to represent the controller's view of the services offered by the Game class,
 
-- En `GameView` también se mantiene una referencia a `Game` para solicitar los datos que se deben mostrar. Se utilizan métodos como `getCycle()`, `numLemmingsInBoard()` o `positionToString(int, int)`.
+GameStatus to represent the view's view of the services offered by the Game class,
 
-- Desde los objetos del juego también se mantiene una referencia a `Game`, en este caso para comunicarle al juego aquello que tiene que ver con las interacciones del objeto con su entorno. Se usan métodos como `isInAir(Position)` o `lemmingArrived()`. A menudo, a estos métodos se les llama  *callbacks* (acciones de retorno). 
+GameWorld to represent the model's view of the services offered by the Game class.
 
-Aunque exista esa clasificación de métodos en `Game`, nada prohíbe que, por ejemplo, un `GameObject` invoque a `reset`, o que desde `GameView` se invoque, por ejemplo, a `lemmingArrived`. Al fin y al cabo, todos ellos son métodos públicos de `Game` y pueden utilizarse desde cualquier objeto que tenga una referencia a `Game`.
+For example:
 
-Para resolver este problema podemos usar interfaces. En primer lugar, vamos a crear una interfaz distinta para cada uno de estos tres contextos. Cada interfaz va a proporcionar una ***vista parcial*** de `Game` con solo algunos de sus métodos.
-En concreto, vamos a definir `GameModel` para `Controller`, `GameStatus` para `GameView` y `GameWorld` para `GameObject`.
-
-Por ejemplo:
-
-```java
 public interface GameModel {
 
 	public boolean isFinished();
@@ -180,11 +138,8 @@ public interface GameModel {
 	public void reset();
 	// ...
 }
-```
+The Game class must then implement these interfaces:
 
-Una vez definidos los interfaces, haremos que `Game` los implemente:
-
-```java
 public class Game implements GameModel, GameStatus, GameWorld {
 
 	// ... 
@@ -192,19 +147,15 @@ public class Game implements GameModel, GameStatus, GameWorld {
 	private int nLevel;
 	// ...
 	
-	// Métodos de GameModel
+	// Methods declared in GameModel
 	// ...
-	// Métodos de GameWorld
+	// Methods declared in GameWorld
 	// ...
-	// Métodos de GameStatus
+	// Methods declared in GameStatus
 	// ...
-	// Otros métodos
+	// Other methods
 	// ...
 }
-```
+Finally, in each part of the three parts of the program, we must replace each occurrence of the type Game by the corresponding interface type. For example, the execute method of the Command class now has the following form:
 
-Por último, en cada uno de los contextos en los que se usaba `Game` reemplazamos el tipo de la referencia por el interfaz correspondiente. Por ejemplo, en `Controller` tendremos una referencia a un `GameModel`. Del mismo modo, reemplazamos el tipo del parámetro de `execute` de `Command` para que admita un `GameModel` y no un `Game`:
-
-```java
 public abstract void execute(GameModel game, GameView view);
-```
