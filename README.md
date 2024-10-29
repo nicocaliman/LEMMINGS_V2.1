@@ -1,43 +1,4 @@
 # LEMMINGS_V2.1
-<!-- TOC start -->
-- [Práctica 2 - Parte I: Lemmings Refactored](#práctica-2---parte-i-lemmings-refactored)
-	- [Introducción](#introducción)
-	- [Refactorización de la solución de la práctica anterior](#refactorización-de-la-solución-de-la-práctica-anterior)
-		- [Patrón *Command*](#patrón-command)
-		- [Herencia y polimorfismo](#herencia-y-polimorfismo)
-		- [Contenedor de objetos del juego](#contenedor-de-objetos-del-juego)
-		- [Interfaces de `Game`](#interfaces-de-game)
-	- [Pruebas](#pruebas)
-<!-- TOC end -->
-<!-- TOC --><a name="práctica-2-parte-i-lemmings-refactored"></a>
-# Práctica 2 - Parte I: Lemmings Refactored
- 
-**Objetivos:** Herencia, polimorfismo, clases abstractas e interfaces.
-
-**Preguntas frecuentes**: Como es habitual (y normal), que tengáis dudas, las iremos recopilando en este [documento de preguntas frecuentes](../faq.md). Para saber los últimos cambios que se han introducido [puedes consultar la historia del documento](https://github.com/informaticaucm-TPI/2324-SpaceInvaders-SOLUCION/commits/main/enunciados/faq.md).
-
-<!-- TOC --><a name="introducción"></a>
-## Introducción
-
-Esta práctica consiste, fundamentalmente, en aplicar los mecanismos que ofrece la POO para mejorar el código desarrollado hasta ahora en la Práctica 1. En particular, incluiremos las siguientes mejoras:
-
-- En la *Parte I* de la Práctica 2 refactorizaremos[^1] el código de la [Práctica 1](../practica1/practica1.md), preparándolo así para la *Parte II*. Al finalizar la refactorización, la práctica debe pasar los mismos test que se pasaron en la Práctica 1.
-
-  - Modificaremos parte del controlador, distribuyendo su funcionalidad entre un conjunto de clases, mejor estructuradas, de cara a facilitar las extensiones posteriores.
-
-  - Vamos a hacer uso de la herencia para reorganizar los objetos del juego. Como hemos visto, hay mucho código repetido en los distintos tipos de objetos. Por ello, vamos a crear una jerarquía de clases que nos permita extender más fácilmente la funcionalidad del juego.
-      
-  - La herencia también nos va a permitir redefinir cómo almacenamos la información del estado del juego. En la práctica anterior, al no usar herencia, debíamos tener una lista para cada conjunto de objetos. Sin embargo, en esta versión de la práctica, podremos usar una sola estructura de datos para almacenar todos los objetos de juego.
-
-- En la *Parte II*, una vez refactorizada la práctica, añadiremos nuevos objetos y nuevos comandos al juego, de una forma segura, ordenada y fiable, gracias a la nueva estructura del código.
-
-[^1]: Refactorizar consiste en cambiar la estructura del código sin cambiar su funcionalidad. Lo que se suele buscar con ello es mejorar el código. 
-
-Los cambios anteriores se llevarán a cabo de forma progresiva. El objetivo principal es extender la práctica de una manera robusta, preservando la funcionalidad en cada paso que demos, buscando modificar la menor cantidad de código posible cuando la ampliemos.
-
-<!-- TOC --><a name="refactorización-de-la-solución-de-la-práctica-anterior"></a>
-## Refactorización de la solución de la práctica anterior
-
 <!-- TOC --><a name="patrón-command"></a>
 ### Patrón *Command*
 
