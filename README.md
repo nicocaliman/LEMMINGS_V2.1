@@ -1,4 +1,5 @@
-#LEMMINGS_V2.1
+##LEMMINGS_V2.1
+
 The command pattern
 In the application built in the previous assignment, the user could enter several different commands in order to update the game, reset the game, ask for help, etc. The objective of the first part of the refactoring is to introduce a structure to the part of the code that is concerned with processing the user commands which will facilitate the addition of new commands, i.e. which will enable new commands to be added with minimal modifications to the existing code. This structure is the well-known software design pattern 2 referred to as the command pattern 3. The general idea is to encapsulate each user action in its own class where, in this case, the user actions are the commands.
 
